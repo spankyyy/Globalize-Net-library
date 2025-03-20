@@ -16,6 +16,7 @@ Fallback(_G, "Globalize", {}) -- Globalize
 Fallback(Globalize, "Internal", {}) -- Globalize.Internal
 Fallback(Globalize.Internal, "Receivers", {}) -- Globalize.Internal.Receivers
 Fallback(Globalize.Internal, "RateLimiting", {}) -- Globalize.Internal.RateLimiting
+Fallback(Globalize.Internal, "GlobalVariables", {}) -- Globalize.Internal.GlobalVariables
 
 --------------------------------------------------------------------------------------------------------------------------------
 
@@ -128,7 +129,7 @@ if SERVER then
 
     function Globalize.Send(NetworkID, Data, Recipients)
         if not NetworkID then return end
-        if not Data then return end
+        if not Data then Data = {} end
 
         local Internal = Globalize.Internal
 
@@ -206,7 +207,7 @@ end
 if CLIENT then
     function Globalize.Send(NetworkID, Data)
         if not NetworkID then return end
-        if not Data then return end
+        if not Data then Data = {} end
 
         local Internal = Globalize.Internal
 
@@ -252,7 +253,7 @@ if CLIENT then
         end)
     end
 
-    function Globalize.Internal.CallReceiver(NetworkID, Data, Len)
+    function Globalize.Internal.CallReceiver(NetworkID, Data, Len, Ply)
         if not NetworkID then return end
         if not Data then return end
         if not Globalize.Internal.Receivers[NetworkID] then return end
@@ -261,8 +262,7 @@ if CLIENT then
 
         local Callback = _Receiver.callback
 
-        
-        Callback(Data, Len)
+        Callback(Data, Len, Ply)
     end
 end
 
@@ -297,7 +297,6 @@ end
 Globalize.Internal.ActiveSegmentedPackets = {}
 net.Receive("Globalize.NetworkChannel", function(len, ply)
     local IsSegmented = net.ReadBool()
-    local ActiveSegmentedPackets = Globalize.Internal.ActiveSegmentedPackets
     
     if IsSegmented then
         
@@ -305,20 +304,20 @@ net.Receive("Globalize.NetworkChannel", function(len, ply)
         local SegmentsSent = net.ReadUInt(16)
         local NumSegments = net.ReadUInt(16)
         local Segment = ReadData()
-    
-        ActiveSegmentedPackets[SegmentID] = ActiveSegmentedPackets[SegmentID] or {
+
+        local SegmentedPacket = Fallback(Globalize.Internal.ActiveSegmentedPackets, SegmentID, {
             data = "",
             len = 0
-        }
+        })
 
-        ActiveSegmentedPackets[SegmentID].data = ActiveSegmentedPackets[SegmentID].data .. Segment
-        ActiveSegmentedPackets[SegmentID].len = ActiveSegmentedPackets[SegmentID].len + len
+        SegmentedPacket.data = SegmentedPacket.data .. Segment
+        SegmentedPacket.len = SegmentedPacket.len + len
 
         if SegmentsSent == NumSegments then
-            local CompressedPacket = ActiveSegmentedPackets[SegmentID]
-            local len = ActiveSegmentedPackets[SegmentID].len
+            local CompressedPacket = SegmentedPacket
+            local len = SegmentedPacket.len
 
-            ActiveSegmentedPackets[SegmentID] = nil
+            ActiveSegPackets[SegmentID] = nil
 
             local Packet = UncompressPacket(CompressedPacket.data)
             Globalize.Internal.CallReceiver(Packet.id, Packet.data, len, ply)
@@ -332,5 +331,65 @@ net.Receive("Globalize.NetworkChannel", function(len, ply)
     Globalize.Internal.CallReceiver(Packet.id, Packet.data, len, ply)
 end)
 
+--------------------------------------------------------------------------------------------------------------------------------
 
+function Globalize.SetGlobal(VariableID, ...)
+    if VariableID == nil then return end
 
+    local Data = {...}
+
+    local GlobalVariables = Globalize.Internal.GlobalVariables
+
+    Globalize.Send("GlobalizeInternalGlobalVar", {
+        VariableID = VariableID,
+        Data = Data
+    })
+
+    table.CopyFromTo(Data, GlobalVariables[VariableID])
+end
+
+function Globalize.GetGlobal(VariableID)
+    if VariableID == nil then return end
+
+    local GlobalVariables = Globalize.Internal.GlobalVariables
+
+    return unpack(GlobalVariables[VariableID])
+end
+
+function Globalize.Internal.NetworkGlobal(VariableID, Ply)
+    if VariableID == nil then return end
+
+    local Data = {Globalize.GetGlobal(VariableID)}
+
+    Globalize.Send("GlobalizeInternalGlobalVar", {
+        VariableID = VariableID,
+        Data = Data
+    }, Ply)
+end
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+Globalize.Subscribe("GlobalizeInternalGlobalVar", function(Packet)
+    local VariableID = Packet.VariableID
+    local Data = Packet.Data
+
+    Globalize.SetGlobal(VariableID, unpack(Data))
+end)
+
+--------------------------------------------------------------------------------------------------------------------------------
+
+if CLIENT then
+    hook.Add("InitPostEntity", "GlobalizeAskData", function()
+        Globalize.Send("GlobalizeInternalAskForGlobalVar")
+    end)
+end
+
+if SERVER then
+    Globalize.Subscribe("GlobalizeInternalAskForGlobalVar", function(Packet, len, ply)
+        local GlobalVariables = Globalize.Internal.GlobalVariables
+
+        for VariableID in pairs(GlobalVariables) do
+            Globalize.Internal.NetworkGlobal(VariableID, ply)
+        end
+    end)
+end
