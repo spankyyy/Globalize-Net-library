@@ -33,6 +33,7 @@ local util_Decompress = util.Decompress
 local util_JSONToTable = util.JSONToTable
 local util_TableToJSON = util.TableToJSON
 local util_AddNetworkString = util.AddNetworkString
+local string_format = string.format
 
 local CurTime = CurTime
 local MsgC = MsgC
@@ -52,6 +53,8 @@ Fallback(GlobalizeInternal, "GlobalVariables", {}) -- GlobalizeInternal.GlobalVa
 GlobalizeInternal.MaxPacketSize = 2^15
 GlobalizeInternal.PacketSegmentDelay = 0.1
 GlobalizeInternal.RequestID = 0 -- Increments everytime we send a packet
+
+--------------------------------------------------------------------------------------------------------------------------------
 
 local function bufferSplitter(buffer, maxBufferSize)
     local bufferLen = #buffer
@@ -174,7 +177,7 @@ if SERVER then
         end
 
         GlobalizeInternal.Message(
-            string.format("Packet too BIG (%i bytes) max(%i bytes), Segmenting packet (%i Segments) (%i bytes max) (eta %G seconds)", 
+            string_format("Packet too BIG (%i bytes) max(%i bytes), Segmenting packet (%i Segments) (%i bytes max) (eta %G seconds)", 
             #CompressedPacket, 
             GlobalizeInternal.MaxPacketSize, 
             NumSegments, 
@@ -213,7 +216,7 @@ if SERVER then
         local Delay = _Receiver.ratelimit
 
         if Globalize.LimitRate(NetworkID, Ply, Delay) then
-            GlobalizeInternal.Message(string.format("[%s|%i|%s] hit ratelimit! [%s] only accepts packets every %G seconds", 
+            GlobalizeInternal.Message(string_format("[%s|%i|%s] hit ratelimit! [%s] only accepts packets every %G seconds", 
                 Ply:Name(), 
                 Ply:EntIndex(), 
                 Ply:SteamID(), 
@@ -249,7 +252,7 @@ if CLIENT then
         end
 
         GlobalizeInternal.Message(
-            string.format("Packet too BIG (%i bytes) max(%i bytes), Segmenting packet (%i Segments) (%i bytes max) (eta %G seconds)", 
+            string_format("Packet too BIG (%i bytes) max(%i bytes), Segmenting packet (%i Segments) (%i bytes max) (eta %G seconds)", 
             #CompressedPacket, 
             GlobalizeInternal.MaxPacketSize, 
             NumSegments, 
