@@ -10,7 +10,7 @@
 
 `Globalize.Subscribe(string NetworkID, function Callback, number seconds RateLimit) -> nil`
 - Adds a `Callback` to the specificed `NetworkID`  
-- The rate limiter that will trigger if a message is received before `RateLimit` seconds
+- The rate limiter that will trigger if a message is received before `RateLimit` seconds since the last message
 
 `Globalize.Unsubscribe(string NetworkID) -> nil`
 - Removes the callback from the specified `NetworkID`
