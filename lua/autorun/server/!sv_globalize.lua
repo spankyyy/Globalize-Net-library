@@ -143,7 +143,7 @@ end
 
 util_AddNetworkString("Globalize.NetworkChannel")
 
-function Globalize.LimitRate(NetworkID, Ply, Delay)
+function GlobalizeInternal.LimitRate(NetworkID, Ply, Delay)
     if not NetworkID then return false end
     if not IsValid(Ply) then return false end
     if not Delay then return false end
@@ -224,7 +224,7 @@ function GlobalizeInternal.CallReceiver(NetworkID, Data, Len, Ply)
     local Callback = _Receiver.callback
     local Delay = _Receiver.ratelimit
 
-    if Globalize.LimitRate(NetworkID, Ply, Delay) then
+    if GlobalizeInternal.LimitRate(NetworkID, Ply, Delay) then
         GlobalizeInternal.Message(string_format("[%s|%i|%s] hit ratelimit! [%s] only accepts packets every %G seconds", 
             Ply:Name(), 
             Ply:EntIndex(), 
@@ -243,8 +243,6 @@ end
 function Globalize.Subscribe(NetworkID, Callback, RateLimit)
     if not NetworkID then return end
     if not Callback then return end
-
-    
 
     Fallback(GlobalizeInternal.Receivers, NetworkID, {})
 
