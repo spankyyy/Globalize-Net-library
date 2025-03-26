@@ -13,7 +13,7 @@
 - The rate limiter that will trigger if a message is received before `RateLimit` seconds
 
 `Globalize.Unsubscribe(string NetworkID) -> nil`
-> Removes the callback from the specified `NetworkID`
+- Removes the callback from the specified `NetworkID`
 
 `Globalize.SetGlobal(string VariableID, ...) -> ...`
 - Sets and networks any variables that can be accessed with `Globalize.GetGlobal(string VariableID)`
